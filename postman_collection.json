@@ -1,0 +1,344 @@
+{
+  "info": {
+    "name": "Sales Order Management API",
+    "description": "MERN Sales Order Management Module. Set {{base_url}} (default http://localhost:5000/api). Run the collection top-to-bottom (Collection Runner) so the List requests capture ids before the Order requests use them. Covers all 7 tasks and all 10 order business-logic scenarios with test assertions.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:5000/api" },
+    { "key": "customerId", "value": "" },
+    { "key": "inactiveCustomerId", "value": "" },
+    { "key": "productId", "value": "" },
+    { "key": "productId2", "value": "" },
+    { "key": "focProductId", "value": "" },
+    { "key": "oosProductId", "value": "" },
+    { "key": "inactiveProductId", "value": "" },
+    { "key": "orderId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "event": [
+        { "listen": "test", "script": { "exec": [
+          "pm.test('Health is ok', () => pm.response.to.have.status(200));"
+        ] } }
+      ],
+      "request": { "method": "GET", "url": "{{base_url}}/health" }
+    },
+    {
+      "name": "Customers",
+      "item": [
+        {
+          "name": "List Customers",
+          "event": [
+            { "listen": "test", "script": { "exec": [
+              "const d = pm.response.json().data;",
+              "pm.test('Customers returned', () => pm.expect(d.length).to.be.above(0));",
+              "if (d && d.length) {",
+              "  const active = d.find(c => c.status === 'active') || d[0];",
+              "  pm.collectionVariables.set('customerId', active._id);",
+              "  const inactive = d.find(c => c.status === 'inactive');",
+              "  if (inactive) pm.collectionVariables.set('inactiveCustomerId', inactive._id);",
+              "}"
+            ] } }
+          ],
+          "request": { "method": "GET", "url": "{{base_url}}/customers" }
+        },
+        {
+          "name": "Search customer by NAME",
+          "event": [ { "listen": "test", "script": { "exec": [
+            "pm.test('200 + results', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().data.length).to.be.above(0); });"
+          ] } } ],
+          "request": { "method": "GET", "url": "{{base_url}}/customers/search?q=pharmacy" }
+        },
+        {
+          "name": "Search customer by CODE",
+          "event": [ { "listen": "test", "script": { "exec": [
+            "pm.test('200', () => pm.response.to.have.status(200));"
+          ] } } ],
+          "request": { "method": "GET", "url": "{{base_url}}/customers/search?q=CUST-001" }
+        },
+        {
+          "name": "View customer profile",
+          "request": { "method": "GET", "url": "{{base_url}}/customers/{{customerId}}" }
+        },
+        {
+          "name": "View customer outstanding balance",
+          "event": [ { "listen": "test", "script": { "exec": [
+            "pm.test('has availableCredit', () => pm.expect(pm.response.json().data).to.have.property('availableCredit'));"
+          ] } } ],
+          "request": { "method": "GET", "url": "{{base_url}}/customers/{{customerId}}/outstanding" }
+        },
+        {
+          "name": "View customer purchase history",
+          "request": { "method": "GET", "url": "{{base_url}}/customers/{{customerId}}/history" }
+        }
+      ]
+    },
+    {
+      "name": "Products",
+      "item": [
+        {
+          "name": "List Products",
+          "event": [
+            { "listen": "test", "script": { "exec": [
+              "const d = pm.response.json().data;",
+              "pm.test('Products returned', () => pm.expect(d.length).to.be.above(0));",
+              "const inStock = d.filter(x => x.status === 'active' && x.stockQuantity > 0);",
+              "if (inStock[0]) pm.collectionVariables.set('productId', inStock[0]._id);",
+              "if (inStock[1]) pm.collectionVariables.set('productId2', inStock[1]._id);",
+              "const foc = d.find(x => x.focBuyQuantity > 0 && x.focFreeQuantity > 0 && x.stockQuantity > 0);",
+              "if (foc) pm.collectionVariables.set('focProductId', foc._id);",
+              "const oos = d.find(x => x.status === 'active' && x.stockQuantity === 0);",
+              "if (oos) pm.collectionVariables.set('oosProductId', oos._id);",
+              "const inactive = d.find(x => x.status === 'inactive');",
+              "if (inactive) pm.collectionVariables.set('inactiveProductId', inactive._id);"
+            ] } }
+          ],
+          "request": { "method": "GET", "url": "{{base_url}}/products?limit=100" }
+        },
+        {
+          "name": "Search by Product NAME",
+          "request": { "method": "GET", "url": "{{base_url}}/products/search?q=Panadol" }
+        },
+        {
+          "name": "Search by Product CODE",
+          "request": { "method": "GET", "url": "{{base_url}}/products/search?q=PRD-001" }
+        },
+        {
+          "name": "Search by BRAND",
+          "request": { "method": "GET", "url": "{{base_url}}/products/search?q=Calpol" }
+        },
+        {
+          "name": "Search by GENERIC",
+          "request": { "method": "GET", "url": "{{base_url}}/products/search?q=Paracetamol" }
+        },
+        {
+          "name": "Get Product",
+          "request": { "method": "GET", "url": "{{base_url}}/products/{{productId}}" }
+        },
+        {
+          "name": "Similar Products (same generic / category / alt brands)",
+          "request": { "method": "GET", "url": "{{base_url}}/products/{{productId}}/similar" }
+        },
+        {
+          "name": "Product Comparison (brand/price/stock/discount)",
+          "request": { "method": "GET", "url": "{{base_url}}/products/{{productId}}/comparison" }
+        },
+        {
+          "name": "Product Variations",
+          "request": { "method": "GET", "url": "{{base_url}}/products/{{focProductId}}/variations" }
+        }
+      ]
+    },
+    {
+      "name": "Orders - Create + Scenarios 1-10",
+      "item": [
+        {
+          "name": "Create Order (main - sets orderId)",
+          "event": [ { "listen": "test", "script": { "exec": [
+            "pm.test('201 created', () => pm.response.to.have.status(201));",
+            "if (pm.response.code === 201) pm.collectionVariables.set('orderId', pm.response.json().data._id);"
+          ] } } ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/orders",
+            "body": { "mode": "raw", "raw": "{\n  \"customer\": \"{{customerId}}\",\n  \"deliveryDate\": \"2026-08-10\",\n  \"remarks\": \"Created via Postman\",\n  \"items\": [\n    { \"product\": \"{{productId}}\", \"quantity\": 20, \"rate\": 10, \"discountPercentage\": 5 }\n  ]\n}" }
+          }
+        },
+        {
+          "name": "Scenario 1 - Normal Order (net 200)",
+          "event": [ { "listen": "test", "script": { "exec": [
+            "pm.test('201 created', () => pm.response.to.have.status(201));",
+            "const d = pm.response.json().data;",
+            "pm.test('gross 200, net 200', () => { pm.expect(d.subtotal).to.eql(200); pm.expect(d.netAmount).to.eql(200); });"
+          ] } } ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/orders",
+            "body": { "mode": "raw", "raw": "{\n  \"customer\": \"{{customerId}}\",\n  \"deliveryDate\": \"2026-08-10\",\n  \"items\": [ { \"product\": \"{{productId}}\", \"quantity\": 20, \"rate\": 10, \"discountPercentage\": 0, \"focQuantity\": 0 } ]\n}" }
+          }
+        },
+        {
+          "name": "Scenario 2 - Discount 5% (disc 10, net 190)",
+          "event": [ { "listen": "test", "script": { "exec": [
+            "pm.test('201 created', () => pm.response.to.have.status(201));",
+            "const d = pm.response.json().data;",
+            "pm.test('discount 10, net 190', () => { pm.expect(d.totalDiscount).to.eql(10); pm.expect(d.netAmount).to.eql(190); });"
+          ] } } ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/orders",
+            "body": { "mode": "raw", "raw": "{\n  \"customer\": \"{{customerId}}\",\n  \"deliveryDate\": \"2026-08-10\",\n  \"items\": [ { \"product\": \"{{productId}}\", \"quantity\": 20, \"rate\": 10, \"discountPercentage\": 5, \"focQuantity\": 0 } ]\n}" }
+          }
+        },
+        {
+          "name": "Scenario 3 - FOC Buy10 Get1, qty 25 -> FOC 2",
+          "event": [ { "listen": "test", "script": { "exec": [
+            "pm.test('201 created', () => pm.response.to.have.status(201));",
+            "const d = pm.response.json().data;",
+            "pm.test('FOC = 2', () => pm.expect(d.items[0].focQuantity).to.eql(2));"
+          ] } } ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/orders",
+            "body": { "mode": "raw", "raw": "{\n  \"customer\": \"{{customerId}}\",\n  \"deliveryDate\": \"2026-08-10\",\n  \"items\": [ { \"product\": \"{{focProductId}}\", \"quantity\": 25 } ]\n}" }
+          }
+        },
+        {
+          "name": "Scenario 4 - Multiple Products (overall totals)",
+          "event": [ { "listen": "test", "script": { "exec": [
+            "pm.test('201 created', () => pm.response.to.have.status(201));",
+            "const d = pm.response.json().data;",
+            "pm.test('2 items + grand total', () => { pm.expect(d.items.length).to.eql(2); pm.expect(d.grandTotal).to.be.above(0); });"
+          ] } } ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/orders",
+            "body": { "mode": "raw", "raw": "{\n  \"customer\": \"{{customerId}}\",\n  \"deliveryDate\": \"2026-08-10\",\n  \"items\": [\n    { \"product\": \"{{productId}}\", \"quantity\": 10, \"rate\": 10, \"discountPercentage\": 5 },\n    { \"product\": \"{{productId2}}\", \"quantity\": 5, \"rate\": 4, \"discountPercentage\": 0 }\n  ]\n}" }
+          }
+        },
+        {
+          "name": "Scenario 5 - Insufficient Stock (expect 400)",
+          "event": [ { "listen": "test", "script": { "exec": [
+            "pm.test('400 rejected', () => pm.response.to.have.status(400));",
+            "pm.test('stock message', () => pm.expect(pm.response.json().message).to.match(/stock/i));"
+          ] } } ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/orders",
+            "body": { "mode": "raw", "raw": "{\n  \"customer\": \"{{customerId}}\",\n  \"deliveryDate\": \"2026-08-10\",\n  \"items\": [ { \"product\": \"{{oosProductId}}\", \"quantity\": 5 } ]\n}" }
+          }
+        },
+        {
+          "name": "Scenario 6 - Inactive Product (expect 400)",
+          "event": [ { "listen": "test", "script": { "exec": [
+            "pm.test('400 rejected', () => pm.response.to.have.status(400));",
+            "pm.test('inactive message', () => pm.expect(pm.response.json().message).to.match(/inactive/i));"
+          ] } } ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/orders",
+            "body": { "mode": "raw", "raw": "{\n  \"customer\": \"{{customerId}}\",\n  \"deliveryDate\": \"2026-08-10\",\n  \"items\": [ { \"product\": \"{{inactiveProductId}}\", \"quantity\": 2 } ]\n}" }
+          }
+        },
+        {
+          "name": "Scenario 7 - Inactive Customer (expect 400)",
+          "event": [ { "listen": "test", "script": { "exec": [
+            "pm.test('400 rejected', () => pm.response.to.have.status(400));",
+            "pm.test('inactive customer message', () => pm.expect(pm.response.json().message).to.match(/inactive customer/i));"
+          ] } } ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/orders",
+            "body": { "mode": "raw", "raw": "{\n  \"customer\": \"{{inactiveCustomerId}}\",\n  \"deliveryDate\": \"2026-08-10\",\n  \"items\": [ { \"product\": \"{{productId}}\", \"quantity\": 2 } ]\n}" }
+          }
+        },
+        {
+          "name": "Scenario 8 - Invalid Quantity (expect 400)",
+          "event": [ { "listen": "test", "script": { "exec": [
+            "pm.test('400 rejected', () => pm.response.to.have.status(400));",
+            "pm.test('quantity message', () => pm.expect(pm.response.json().message).to.match(/quantity/i));"
+          ] } } ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/orders",
+            "body": { "mode": "raw", "raw": "{\n  \"customer\": \"{{customerId}}\",\n  \"deliveryDate\": \"2026-08-10\",\n  \"items\": [ { \"product\": \"{{productId}}\", \"quantity\": 0 } ]\n}" }
+          }
+        },
+        {
+          "name": "Scenario 9 - Missing Customer (expect 400)",
+          "event": [ { "listen": "test", "script": { "exec": [
+            "pm.test('400 rejected', () => pm.response.to.have.status(400));",
+            "pm.test('customer message', () => pm.expect(pm.response.json().message).to.match(/customer/i));"
+          ] } } ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/orders",
+            "body": { "mode": "raw", "raw": "{\n  \"deliveryDate\": \"2026-08-10\",\n  \"items\": [ { \"product\": \"{{productId}}\", \"quantity\": 5 } ]\n}" }
+          }
+        },
+        {
+          "name": "Scenario 10 - Missing Delivery Date (expect 400)",
+          "event": [ { "listen": "test", "script": { "exec": [
+            "pm.test('400 rejected', () => pm.response.to.have.status(400));",
+            "pm.test('delivery date message', () => pm.expect(pm.response.json().message).to.match(/delivery date/i));"
+          ] } } ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/orders",
+            "body": { "mode": "raw", "raw": "{\n  \"customer\": \"{{customerId}}\",\n  \"items\": [ { \"product\": \"{{productId}}\", \"quantity\": 5 } ]\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Orders - Listing / PDF / Email / Status",
+      "item": [
+        {
+          "name": "List Orders (Task 5)",
+          "event": [ { "listen": "test", "script": { "exec": [
+            "pm.test('200 + orders', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().total).to.be.above(0); });"
+          ] } } ],
+          "request": { "method": "GET", "url": "{{base_url}}/orders" }
+        },
+        {
+          "name": "List Orders - filter by status + date",
+          "request": { "method": "GET", "url": "{{base_url}}/orders?status=submitted&dateFrom=2026-01-01&dateTo=2026-12-31" }
+        },
+        {
+          "name": "List Orders - filter by customer",
+          "request": { "method": "GET", "url": "{{base_url}}/orders?customer={{customerId}}" }
+        },
+        {
+          "name": "Get Order",
+          "request": { "method": "GET", "url": "{{base_url}}/orders/{{orderId}}" }
+        },
+        {
+          "name": "Update Order Status (workflow)",
+          "event": [ { "listen": "test", "script": { "exec": [
+            "pm.test('200 updated', () => pm.response.to.have.status(200));"
+          ] } } ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{base_url}}/orders/{{orderId}}/status",
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"confirmed\"\n}" }
+          }
+        },
+        {
+          "name": "Download Order PDF (Task 6)",
+          "event": [ { "listen": "test", "script": { "exec": [
+            "pm.test('200 + pdf', () => { pm.response.to.have.status(200); pm.expect(pm.response.headers.get('Content-Type')).to.include('application/pdf'); });"
+          ] } } ],
+          "request": { "method": "GET", "url": "{{base_url}}/orders/{{orderId}}/pdf" }
+        },
+        {
+          "name": "Email Order (Task 7)",
+          "event": [ { "listen": "test", "script": { "exec": [
+            "pm.test('200 + responds', () => { pm.response.to.have.status(200); pm.expect(pm.response.json()).to.have.property('sent'); });"
+          ] } } ],
+          "request": { "method": "POST", "url": "{{base_url}}/orders/{{orderId}}/email" }
+        }
+      ]
+    },
+    {
+      "name": "Meta",
+      "item": [
+        { "name": "Company", "request": { "method": "GET", "url": "{{base_url}}/meta/company" } },
+        { "name": "Users (sales persons)", "request": { "method": "GET", "url": "{{base_url}}/meta/users?role=sales_person" } }
+      ]
+    }
+  ]
+}

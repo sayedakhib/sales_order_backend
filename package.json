@@ -1,0 +1,29 @@
+{
+  "name": "sales-order-backend",
+  "version": "1.0.0",
+  "description": "Sales Order Management Module - Backend (Express + MongoDB)",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "seed": "node src/seed/seed.js"
+  },
+  "keywords": [
+    "sales-order",
+    "mern",
+    "express",
+    "mongodb"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "mongoose": "^8.9.5",
+    "morgan": "^1.10.0",
+    "nodemailer": "^6.9.16",
+    "pdfkit": "^0.15.1"
+  }
+}
