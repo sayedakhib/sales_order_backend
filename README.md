@@ -191,3 +191,15 @@ backend/
 ├── .env.example
 └── package.json
 ```
+
+---
+
+## Frontend Repository
+
+The React + Ant Design frontend for this project lives in a separate repository:
+
+👉 **https://github.com/sayedakhib/sales_order_frontend**
+
+Start this backend first (MongoDB → backend), then follow the frontend repo's
+README to run the UI. In development the frontend proxies `/api` to this server
+at `http://localhost:5000`.
