@@ -1,9 +1,8 @@
 // The fixed seed data - company, users, customers, products.
-// The orders aren't hard-coded here; seed.js builds them with the real
 // calc functions so the totals always match what the app would produce.
 
 export const company = {
-  name: 'Sayed Kaif Medical Distribution',
+  name: 'Muscat Medical Distribution',
   address: 'Building 12, Al Khuwair, Muscat, Oman',
   phone: '+968 2400 0000',
   email: 'akhibsayed85@gmail.com',
@@ -13,12 +12,10 @@ export const company = {
 
 export const users = [
   { name: 'Sayed Kaif', email: 'akhibsayed85@gmail.com', role: 'super_admin', phone: '+968 9000 0001' },
-  // owner points at a real inbox so the order emails actually land somewhere
   { name: 'Sayed Kaif', email: 'akhibsayed85@gmail.com', role: 'company_owner', phone: '+968 9000 0002' },
   { name: 'Rahul Sharma', email: 'rahul@gmail.com', role: 'sales_manager', phone: '+968 9000 0003' },
-  { name: 'Imran Qureshi', email: 'imran.sales@gmail.com', role: 'sales_person', phone: '+968 9000 0004' },
-  { name: 'Sana Pervin', email: 'sana.sales@gmail.com', role: 'sales_person', phone: '+968 9000 0005' },
-  { name: 'Kaif', email: 'kaif.sales@gmail.com', role: 'sales_person', phone: '+968 9000 0006' },
+  { name: 'Imran khan', email: 'imran.sales@gmail.com', role: 'sales_person', phone: '+968 9000 0004' },
+  { name: 'Sayed Kaif', email: 'kaif.sales@gmail.com', role: 'sales_person', phone: '+968 9000 0006' },
 ];
 
 // made-up customers, all around Muscat
