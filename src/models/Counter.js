@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-// Atomic sequence generator used for auto order numbers (SO-20260001).
+// little counter collection we use to generate order numbers like SO-20260001
 const counterSchema = new mongoose.Schema({
   _id: { type: String, required: true }, // e.g. "order-2026"
   seq: { type: Number, default: 0 },
@@ -8,9 +8,8 @@ const counterSchema = new mongoose.Schema({
 
 const Counter = mongoose.model('Counter', counterSchema);
 
-/**
- * Atomically increment and return the next sequence value for a key.
- */
+// bump the counter and hand back the new value. $inc is atomic so two orders
+// created at the same time can't grab the same number.
 export async function nextSequence(key) {
   const doc = await Counter.findByIdAndUpdate(
     key,

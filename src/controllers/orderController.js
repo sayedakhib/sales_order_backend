@@ -9,42 +9,39 @@ import { buildPricedItem, computeOrderTotals } from '../services/orderCalc.js';
 import env from '../config/env.js';
 import { sendOrderEmail } from '../services/emailService.js';
 
-// Generate next order number: SO-YYYY####  (e.g. SO-20260001)
+// next order number, e.g. SO-20260001
 async function generateOrderNumber() {
   const year = new Date().getFullYear();
   const seq = await nextSequence(`order-${year}`);
   return `SO-${year}${String(seq).padStart(4, '0')}`;
 }
 
-/**
- * POST /api/orders
- * Validates customer, products, stock, quantities, delivery date (Scenarios 1-10),
- * computes line + order totals, decrements stock, updates customer outstanding,
- * then (best-effort) emails the order PDF to owner + manager.
- */
+// POST /api/orders
+// Runs all the order validations, works out the totals, then drops stock,
+// bumps the customer's balance and sends the email.
 export const createOrder = asyncHandler(async (req, res) => {
   const body = req.body || {};
   const { customer: customerId, salesPerson, deliveryDate, orderDate, remarks, bookingNumber } = body;
   const items = Array.isArray(body.items) ? body.items : [];
   const status = body.status === 'draft' ? 'draft' : 'submitted';
 
-  // --- Scenario 9: Missing customer ---
+  // need a customer
   if (!customerId) throw ApiError.badRequest('Customer is required');
   if (!mongoose.isValidObjectId(customerId)) throw ApiError.badRequest('Invalid customer id');
 
-  // --- Scenario 10: Missing delivery date (required for submitted orders) ---
+  // delivery date only matters once it's a real (non-draft) order
   if (status !== 'draft' && !deliveryDate) throw ApiError.badRequest('Delivery date is required');
 
   if (!items.length) throw ApiError.badRequest('At least one order item is required');
 
-  // --- Customer must exist and (Scenario 7) be active ---
+  // customer must exist, and can't be inactive (drafts are let off)
   const customer = await Customer.findById(customerId);
   if (!customer) throw ApiError.notFound('Customer not found');
   if (status !== 'draft' && customer.status !== 'active') {
     throw ApiError.badRequest('Cannot create order for an inactive customer');
   }
 
-  // --- Resolve & validate each item ---
+  // grab every product up front and key them by id
   const productIds = items.map((i) => i.product);
   for (const id of productIds) {
     if (!mongoose.isValidObjectId(id)) throw ApiError.badRequest(`Invalid product id: ${id}`);
@@ -57,20 +54,20 @@ export const createOrder = asyncHandler(async (req, res) => {
     const product = productMap.get(String(input.product));
     if (!product) throw ApiError.notFound(`Product not found: ${input.product}`);
 
-    // --- Scenario 8: Invalid quantity ---
+    // quantity has to be a positive number
     const qty = Number(input.quantity);
     if (!Number.isFinite(qty) || qty <= 0) {
       throw ApiError.badRequest(`Quantity must be greater than 0 for ${product.productName}`);
     }
 
-    // --- Scenario 6: Inactive product ---
+    // no selling inactive products
     if (status !== 'draft' && product.status !== 'active') {
       throw ApiError.badRequest(`Product is inactive: ${product.productName}`);
     }
 
     const priced = buildPricedItem(product, input);
 
-    // --- Scenario 5: Insufficient stock (qty + FOC free units) ---
+    // enough stock to cover the order + the free FOC units?
     const required = priced.quantity + priced.focQuantity;
     if (status !== 'draft' && required > product.stockQuantity) {
       throw ApiError.badRequest(
@@ -81,10 +78,10 @@ export const createOrder = asyncHandler(async (req, res) => {
     pricedItems.push(priced);
   }
 
-  // --- Order totals (Scenario 1,2,4 + VAT) ---
+  // add up the lines -> subtotal, discount, VAT, grand total
   const totals = computeOrderTotals(pricedItems, env.vatPercent);
 
-  // --- Sales person (optional) ---
+  // sales person is optional
   let salesPersonDoc = null;
   if (salesPerson && mongoose.isValidObjectId(salesPerson)) {
     salesPersonDoc = await User.findById(salesPerson);
@@ -107,9 +104,9 @@ export const createOrder = asyncHandler(async (req, res) => {
     status,
   });
 
-  // --- Side effects only for submitted (not draft) orders ---
+  // a draft just sits there - only a submitted order touches stock/balance/email
   if (status === 'submitted') {
-    // Decrement stock (qty + FOC) for each product.
+    // take the sold + free units out of stock
     await Promise.all(
       pricedItems.map((it) =>
         Product.updateOne(
@@ -118,13 +115,13 @@ export const createOrder = asyncHandler(async (req, res) => {
         )
       )
     );
-    // Increase customer outstanding by grand total.
+    // add the bill to what the customer owes
     await Customer.updateOne(
       { _id: customer._id },
       { $inc: { outstandingAmount: totals.grandTotal } }
     );
 
-    // Best-effort email notification with PDF attachment (Task 7).
+    // send the email, but don't let a mail failure break the order
     sendOrderEmail(order._id).catch((err) =>
       console.error('[email] order notification failed:', err.message)
     );
@@ -134,7 +131,7 @@ export const createOrder = asyncHandler(async (req, res) => {
   res.status(201).json({ success: true, message: 'Order created', data: populated });
 });
 
-// GET /api/orders  -> listing with filters (Task 5)
+// GET /api/orders - list with search + filters
 export const listOrders = asyncHandler(async (req, res) => {
   const { q, orderNumber, customer, status, dateFrom, dateTo, page = 1, limit = 50 } = req.query;
   const filter = {};
@@ -150,6 +147,7 @@ export const listOrders = asyncHandler(async (req, res) => {
     filter.orderDate = {};
     if (dateFrom) filter.orderDate.$gte = new Date(dateFrom);
     if (dateTo) {
+      // push the "to" date to end-of-day so that whole day is included
       const end = new Date(dateTo);
       end.setHours(23, 59, 59, 999);
       filter.orderDate.$lte = end;
@@ -162,6 +160,7 @@ export const listOrders = asyncHandler(async (req, res) => {
     Order.countDocuments(filter),
   ]);
 
+  // trim down to just the columns the listing screen needs
   const data = orders.map((o) => ({
     id: o._id,
     orderNumber: o.orderNumber,
@@ -175,26 +174,26 @@ export const listOrders = asyncHandler(async (req, res) => {
   res.json({ success: true, total, page: Number(page), limit: Number(limit), data });
 });
 
-// GET /api/orders/:id  -> full order
+// GET /api/orders/:id
 export const getOrder = asyncHandler(async (req, res) => {
   const order = await Order.findById(req.params.id).populate('customer salesPerson');
   if (!order) throw ApiError.notFound('Order not found');
   res.json({ success: true, data: order });
 });
 
-// Allowed status transitions (order status workflow).
+// where each status is allowed to go next
 export const ORDER_TRANSITIONS = {
   draft: ['submitted', 'cancelled'],
   submitted: ['confirmed', 'cancelled'],
   confirmed: ['delivered', 'cancelled'],
-  delivered: [], // terminal
-  cancelled: [], // terminal
+  delivered: [], // nowhere left to go
+  cancelled: [], // nowhere left to go
 };
 
-// Statuses that have reserved stock / added to customer outstanding.
+// in these states the stock is reserved and it's on the customer's balance
 const STOCK_HELD = new Set(['submitted', 'confirmed']);
 
-// Apply (sign = -1) or restore (sign = +1) stock for an order's items.
+// pull stock out (-1) or put it back (+1) for every line on the order
 async function adjustStock(items, sign) {
   await Promise.all(
     items.map((it) =>
@@ -206,13 +205,9 @@ async function adjustStock(items, sign) {
   );
 }
 
-/**
- * PATCH /api/orders/:id/status  -> advance an order through its workflow.
- * Enforces valid transitions and keeps stock / outstanding consistent:
- *  - draft -> submitted: validate active + stock, decrement stock,
- *    add to customer outstanding, email the PDF.
- *  - submitted/confirmed -> cancelled: restore stock, reduce outstanding.
- */
+// PATCH /api/orders/:id/status - move an order along its workflow.
+// Keeps stock and the customer's balance in sync when we submit a draft
+// or cancel an order that was already holding stock.
 export const updateOrderStatus = asyncHandler(async (req, res) => {
   const { status: next } = req.body || {};
   if (!next) throw ApiError.badRequest('status is required');
@@ -230,7 +225,7 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
     );
   }
 
-  // --- Transition: draft -> submitted (acts like submitting the draft) ---
+  // submitting a draft = same checks + stock reservation as a fresh order
   if (current === 'draft' && next === 'submitted') {
     const products = await Product.find({ _id: { $in: order.items.map((i) => i.product) } });
     const map = new Map(products.map((p) => [String(p._id), p]));
@@ -249,7 +244,7 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
     await Customer.updateOne({ _id: order.customer }, { $inc: { outstandingAmount: order.grandTotal } });
   }
 
-  // --- Transition: -> cancelled from a stock-holding state (reverse effects) ---
+  // cancelling an order that was holding stock - hand it all back
   if (next === 'cancelled' && STOCK_HELD.has(current)) {
     await adjustStock(order.items, +1);
     await Customer.updateOne({ _id: order.customer }, { $inc: { outstandingAmount: -order.grandTotal } });
@@ -258,7 +253,7 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
   order.status = next;
   await order.save();
 
-  // Email on a draft being submitted (best-effort).
+  // let the owner/manager know when a draft goes live
   if (current === 'draft' && next === 'submitted') {
     sendOrderEmail(order._id).catch((err) =>
       console.error('[email] order notification failed:', err.message)

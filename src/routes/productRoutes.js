@@ -10,6 +10,7 @@ import {
 
 const router = Router();
 
+// /search before /:id, same reason as the customer routes
 router.get('/', listProducts);
 router.get('/search', searchProducts);
 router.get('/:id', getProduct);

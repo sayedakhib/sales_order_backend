@@ -1,4 +1,4 @@
-// Lightweight HTTP error with a status code and optional details.
+// a basic error that carries an HTTP status code so the handler knows what to send
 export class ApiError extends Error {
   constructor(statusCode, message, details = undefined) {
     super(message);
@@ -15,6 +15,7 @@ export class ApiError extends Error {
   }
 }
 
-// Wrap async route handlers so thrown errors reach the error middleware.
+// wraps an async route so we don't need try/catch everywhere - any throw just
+// gets passed along to the error handler
 export const asyncHandler = (fn) => (req, res, next) =>
   Promise.resolve(fn(req, res, next)).catch(next);

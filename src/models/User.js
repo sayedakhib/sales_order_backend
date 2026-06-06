@@ -1,8 +1,8 @@
 import mongoose from 'mongoose';
 
-// Roles seeded so that credit-limit setup (super admin) and email
-// recipients (company owner / sales manager) and sales persons exist
-// without a full auth layer.
+// We don't have a login system, but we still seed a few users with roles so
+// the "super admin sets credit limit" and "email the owner + manager" bits
+// have someone to point at.
 const userSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },

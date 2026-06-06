@@ -12,7 +12,7 @@ const orderItemSchema = new mongoose.Schema(
     rate: { type: Number, required: true, min: 0 },
     discountPercentage: { type: Number, default: 0, min: 0, max: 100 },
 
-    // Derived figures (computed server-side, stored for history/PDF).
+    // worked out on the server and saved so the order keeps its original numbers
     grossAmount: { type: Number, default: 0 }, // rate * quantity
     discountAmount: { type: Number, default: 0 }, // gross * disc%
     lineTotal: { type: Number, default: 0 }, // gross - discount
@@ -39,7 +39,7 @@ const orderSchema = new mongoose.Schema(
       validate: [(v) => Array.isArray(v) && v.length > 0, 'At least one item is required'],
     },
 
-    // Order-level totals.
+    // whole-order totals
     subtotal: { type: Number, default: 0 }, // sum of gross amounts
     totalDiscount: { type: Number, default: 0 }, // sum of line discounts
     totalFoc: { type: Number, default: 0 }, // sum of free units

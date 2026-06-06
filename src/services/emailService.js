@@ -6,8 +6,8 @@ import { generateOrderPdfBuffer } from './pdfService.js';
 
 let transporter = null;
 
-// Lazily create a transporter from SMTP env config. Returns null if SMTP
-// is not configured (email is then skipped with a warning).
+// build the nodemailer transporter once, on first use.
+// if there's no SMTP config we just return null and skip sending.
 function getTransporter() {
   if (transporter) return transporter;
   if (!env.smtp.host || !env.smtp.user) {
@@ -22,7 +22,7 @@ function getTransporter() {
   return transporter;
 }
 
-// Resolve recipients: explicit env list, else seeded owner + manager.
+// who gets the email - use the env list if set, otherwise the owner + manager
 async function resolveRecipients() {
   if (env.smtp.recipients.length) return env.smtp.recipients;
   const users = await User.find({
@@ -32,9 +32,8 @@ async function resolveRecipients() {
   return users.map((u) => u.email).filter(Boolean);
 }
 
-/**
- * Send the "order submitted" notification with the generated PDF attached.
- */
+// emails the order out with the PDF attached. returns false (instead of throwing)
+// if there's no SMTP set up or nobody to send to, so it never blocks an order.
 export async function sendOrderEmail(orderId) {
   const tx = getTransporter();
   if (!tx) {

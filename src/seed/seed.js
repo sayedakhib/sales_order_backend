@@ -1,5 +1,5 @@
-// Database seed script: wipes and re-populates company, users, customers,
-// products and 10 sample orders. Run with `npm run seed`.
+// wipes the DB and fills it back up with the company, users, customers,
+// products and 10 sample orders. run it with `npm run seed`.
 import mongoose from 'mongoose';
 import { connectDB, disconnectDB } from '../config/db.js';
 import env from '../config/env.js';
@@ -47,7 +47,8 @@ async function run() {
   const customerByCode = new Map(createdCustomers.map((c) => [c.customerCode, c]));
   const productByCode = new Map(createdProducts.map((p) => [p.productCode, p]));
 
-  // Track stock decrements / outstanding so seeded data is internally consistent.
+  // keep a running tally of stock used + amounts owed so the seeded numbers
+  // actually add up (same as if the orders had been placed for real)
   const stockDelta = new Map();
   const outstandingDelta = new Map();
   const year = new Date().getFullYear();
@@ -68,7 +69,7 @@ async function run() {
     seq += 1;
     const orderNumber = `SO-${year}${String(seq).padStart(4, '0')}`;
 
-    // Accumulate side effects.
+    // tally what this order takes out of stock / adds to the customer's balance
     for (const it of pricedItems) {
       const key = String(it.product);
       stockDelta.set(key, (stockDelta.get(key) || 0) + it.quantity + it.focQuantity);
@@ -96,16 +97,16 @@ async function run() {
 
   await Order.insertMany(orderDocs);
 
-  // Persist the counter so the API continues numbering after the seeded orders.
+  // save the counter where it left off so live orders carry on numbering from here
   await Counter.create({ _id: `order-${year}`, seq });
 
-  // Apply stock decrements.
+  // now actually take the stock off the products
   await Promise.all(
     [...stockDelta.entries()].map(([id, qty]) =>
       Product.updateOne({ _id: id }, { $inc: { stockQuantity: -qty } })
     )
   );
-  // Apply outstanding increases.
+  // ...and add the balances onto the customers
   await Promise.all(
     [...outstandingDelta.entries()].map(([id, amt]) =>
       Customer.updateOne({ _id: id }, { $inc: { outstandingAmount: amt } })

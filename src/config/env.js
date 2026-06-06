@@ -2,6 +2,8 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+// everything from .env pulled into one tidy object (with sensible fallbacks),
+// so the rest of the code never has to touch process.env directly
 const env = {
   port: parseInt(process.env.PORT || '5000', 10),
   nodeEnv: process.env.NODE_ENV || 'development',

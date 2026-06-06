@@ -4,11 +4,8 @@ import env from '../config/env.js';
 const fmt = (n) => Number(n || 0).toFixed(3);
 const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('en-GB') : '-');
 
-/**
- * Render an order to a PDF buffer.
- * Contents: company info, order number, customer details, product table
- * (with discount + FOC columns) and the order summary (Task 6).
- */
+// draw the order onto a PDF and hand back the bytes (a Buffer).
+// we build it in memory so the same PDF can be downloaded and emailed.
 export function generateOrderPdfBuffer(order) {
   return new Promise((resolve, reject) => {
     const doc = new PDFDocument({ size: 'A4', margin: 40 });
@@ -20,7 +17,7 @@ export function generateOrderPdfBuffer(order) {
     const cur = env.currency;
     const cust = order.customer || {};
 
-    // ---- Header: company ----
+    // company name + contact up top
     doc.fontSize(18).font('Helvetica-Bold').text(env.company.name, { align: 'left' });
     doc.fontSize(9).font('Helvetica').fillColor('#555');
     if (env.company.address) doc.text(env.company.address);
@@ -37,7 +34,7 @@ export function generateOrderPdfBuffer(order) {
     doc.moveTo(40, doc.y + 4).lineTo(555, doc.y + 4).stroke('#cccccc');
     doc.moveDown(1);
 
-    // ---- Meta + Customer ----
+    // customer on the left, order details on the right
     const topY = doc.y;
     doc.fontSize(10).font('Helvetica-Bold').text('Bill To:', 40, topY);
     doc.font('Helvetica').fontSize(9);
@@ -66,7 +63,7 @@ export function generateOrderPdfBuffer(order) {
     doc.moveDown(1);
     let y = Math.max(doc.y, ry) + 10;
 
-    // ---- Items table ----
+    // the line items table - column positions/widths
     const cols = [
       { label: '#', x: 40, w: 22, align: 'left' },
       { label: 'Product', x: 62, w: 168, align: 'left' },
@@ -86,7 +83,7 @@ export function generateOrderPdfBuffer(order) {
       y += opts.tall ? 22 : 16;
     };
 
-    // header
+    // grey header row
     doc.rect(40, y - 3, 515, 16).fill('#f0f0f0').fillColor('#000');
     drawRow(cols.map((c) => c.label), { bold: true });
     doc.moveTo(40, y - 3).lineTo(555, y - 3).stroke('#cccccc');
@@ -109,7 +106,7 @@ export function generateOrderPdfBuffer(order) {
       doc.moveTo(40, y - 3).lineTo(555, y - 3).stroke('#eeeeee');
     });
 
-    // ---- Summary ----
+    // totals box, bottom-right
     y += 8;
     const sumX = 360;
     const sumRow = (label, value, bold = false) => {

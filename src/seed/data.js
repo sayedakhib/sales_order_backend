@@ -1,6 +1,6 @@
-// Static seed data: company, users, customers, products.
-// Orders are generated programmatically in seed.js using the real
-// order-calculation logic so totals stay consistent.
+// The fixed seed data - company, users, customers, products.
+// The orders aren't hard-coded here; seed.js builds them with the real
+// calc functions so the totals always match what the app would produce.
 
 export const company = {
   name: 'Sayed Kaif Medical Distribution',
@@ -13,7 +13,7 @@ export const company = {
 
 export const users = [
   { name: 'Sayed Kaif', email: 'akhibsayed85@gmail.com', role: 'super_admin', phone: '+968 9000 0001' },
-  // Company owner uses the real inbox so Task-7 order emails are received.
+  // owner points at a real inbox so the order emails actually land somewhere
   { name: 'Sayed Kaif', email: 'akhibsayed85@gmail.com', role: 'company_owner', phone: '+968 9000 0002' },
   { name: 'Rahul Sharma', email: 'rahul@gmail.com', role: 'sales_manager', phone: '+968 9000 0003' },
   { name: 'Imran Qureshi', email: 'imran.sales@gmail.com', role: 'sales_person', phone: '+968 9000 0004' },
@@ -21,7 +21,7 @@ export const users = [
   { name: 'Kaif', email: 'kaif.sales@gmail.com', role: 'sales_person', phone: '+968 9000 0006' },
 ];
 
-// Fictional / random customer data, all based in Muscat, Oman.
+// made-up customers, all around Muscat
 export const customers = [
   {
     customerCode: 'CUST-001',
@@ -76,7 +76,7 @@ export const customers = [
     address: { country: 'Oman', city: 'Muscat', area: 'Al Ghubra', zipcode: '130', googleMapUrl: 'https://maps.google.com/?q=23.5780,58.4000' },
     creditLimit: 1500,
     outstandingAmount: 0,
-    status: 'inactive', // used to demonstrate Scenario 7 (inactive customer)
+    status: 'inactive', // one inactive customer to test the "can't order" case
   },
   {
     customerCode: 'CUST-006',
@@ -91,13 +91,13 @@ export const customers = [
   },
 ];
 
-// 20 products across several generics/brands/categories with FOC schemes.
+// 20 products - a few generics with multiple brands, some with FOC offers
 export const products = [
   // --- Paracetamol family (variations + alternative brands) ---
   { productCode: 'PRD-001', productName: 'Panadol 500mg Tablet', genericName: 'Paracetamol', brand: 'Panadol', category: 'Analgesic', variation: '500mg Tablet', stockQuantity: 500, sellingPrice: 0.800, discountPercentage: 5, focBuyQuantity: 10, focFreeQuantity: 1, status: 'active' },
   { productCode: 'PRD-002', productName: 'Panadol 650mg Tablet', genericName: 'Paracetamol', brand: 'Panadol', category: 'Analgesic', variation: '650mg Tablet', stockQuantity: 300, sellingPrice: 1.000, discountPercentage: 5, focBuyQuantity: 10, focFreeQuantity: 1, status: 'active' },
   { productCode: 'PRD-003', productName: 'Calpol Syrup 120ml', genericName: 'Paracetamol', brand: 'Calpol', category: 'Analgesic', variation: 'Syrup', stockQuantity: 150, sellingPrice: 1.500, discountPercentage: 0, focBuyQuantity: 0, focFreeQuantity: 0, status: 'active' },
-  // Inactive product to demonstrate Scenario 6 (inactive product).
+  // kept inactive so we can test ordering an inactive product
   { productCode: 'PRD-004', productName: 'Fevadol Drops 15ml', genericName: 'Paracetamol', brand: 'Fevadol', category: 'Analgesic', variation: 'Drops', stockQuantity: 90, sellingPrice: 1.200, discountPercentage: 10, focBuyQuantity: 0, focFreeQuantity: 0, status: 'inactive' },
 
   // --- Amoxicillin family ---
@@ -124,12 +124,12 @@ export const products = [
   { productCode: 'PRD-017', productName: 'Ventolin Inhaler 100mcg', genericName: 'Salbutamol', brand: 'Ventolin', category: 'Respiratory', variation: 'Inhaler', stockQuantity: 130, sellingPrice: 3.300, discountPercentage: 0, focBuyQuantity: 0, focFreeQuantity: 0, status: 'active' },
   { productCode: 'PRD-018', productName: 'ORS Sachet (Pack of 10)', genericName: 'Oral Rehydration Salts', brand: 'Pedialyte', category: 'Supplement', variation: 'Sachet', stockQuantity: 600, sellingPrice: 0.600, discountPercentage: 0, focBuyQuantity: 20, focFreeQuantity: 2, status: 'active' },
   { productCode: 'PRD-019', productName: 'Voltaren 50mg Tablet', genericName: 'Diclofenac', brand: 'Voltaren', category: 'Analgesic', variation: '50mg Tablet', stockQuantity: 210, sellingPrice: 2.100, discountPercentage: 5, focBuyQuantity: 10, focFreeQuantity: 1, status: 'active' },
-  // Out-of-stock product (active, zero stock) to demonstrate Scenario 5.
+  // active but zero stock - lets us test the "out of stock" rejection
   { productCode: 'PRD-020', productName: 'Aspirin 75mg Tablet', genericName: 'Acetylsalicylic Acid', brand: 'Aspirin', category: 'Cardio', variation: '75mg Tablet', stockQuantity: 0, sellingPrice: 0.900, discountPercentage: 0, focBuyQuantity: 0, focFreeQuantity: 0, status: 'active' },
 ];
 
-// Order blueprints (resolved to real products/customers in seed.js).
-// productCode + quantity; calc logic fills the rest.
+// rough recipes for the sample orders - seed.js looks up the real
+// products/customers and the calc functions fill in all the numbers
 export const orderBlueprints = [
   { customerCode: 'CUST-001', salesEmail: 'imran.sales@gmail.com', daysAgo: 25, deliveryInDays: 2, remarks: 'Monthly stock replenishment', items: [{ code: 'PRD-001', qty: 50 }, { code: 'PRD-008', qty: 20 }] },
   { customerCode: 'CUST-002', salesEmail: 'sana.sales@gmail.com', daysAgo: 22, deliveryInDays: 3, remarks: 'Urgent antibiotics', items: [{ code: 'PRD-005', qty: 24 }, { code: 'PRD-006', qty: 12 }] },

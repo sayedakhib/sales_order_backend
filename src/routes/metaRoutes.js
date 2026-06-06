@@ -6,7 +6,7 @@ import env from '../config/env.js';
 
 const router = Router();
 
-// GET /api/meta/company  -> company profile for header/PDF preview
+// GET /api/meta/company - company details for the UI header / PDF preview
 router.get(
   '/company',
   asyncHandler(async (req, res) => {
@@ -15,7 +15,7 @@ router.get(
   })
 );
 
-// GET /api/meta/users?role=sales_person  -> users (e.g. sales persons for the order form)
+// GET /api/meta/users?role=sales_person - used to fill the sales-person dropdown
 router.get(
   '/users',
   asyncHandler(async (req, res) => {

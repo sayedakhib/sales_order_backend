@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import env from './env.js';
 
+// open the mongoose connection
 export async function connectDB() {
   mongoose.set('strictQuery', true);
   await mongoose.connect(env.mongoUri);

@@ -1,27 +1,20 @@
-// Pure order-calculation logic. Encodes the business-logic scenarios from the
-// spec (discount, FOC "buy X get Y free", VAT, multi-product totals).
+// All the order math lives here - no DB, just numbers, so it's easy to reuse
+// and test. Handles discounts, the FOC "buy X get Y free" rule, VAT and totals.
 
-/** Round to n decimals (OMR uses 3 decimal places). */
+// round to n decimals (OMR works in 3 - the .EPSILON bit avoids float glitches)
 export function round(value, decimals = 3) {
   const f = 10 ** decimals;
   return Math.round((Number(value) + Number.EPSILON) * f) / f;
 }
 
-/**
- * FOC: Buy `buyQty` get `freeQty` free.
- * Scenario 3: buy 10 get 1 free, ordered 25 -> floor(25/10)*1 = 2.
- */
+// FOC = buy `buyQty`, get `freeQty` free.
+// e.g. buy 10 get 1, order 25 -> floor(25/10) * 1 = 2 free
 export function calcFoc(quantity, buyQty, freeQty) {
   if (!buyQty || !freeQty || buyQty <= 0 || freeQty <= 0) return 0;
   return Math.floor(quantity / buyQty) * freeQty;
 }
 
-/**
- * Compute a single line.
- * gross = rate * quantity
- * discount = gross * disc%
- * lineTotal = gross - discount
- */
+// one line: gross = rate*qty, discount comes off that, total is what's left
 export function computeLine({ rate, quantity, discountPercentage = 0, focQuantity = 0 }) {
   const grossAmount = round(rate * quantity);
   const discountAmount = round(grossAmount * (discountPercentage / 100));
@@ -34,12 +27,7 @@ export function computeLine({ rate, quantity, discountPercentage = 0, focQuantit
   };
 }
 
-/**
- * Compute order-level totals from already-computed line items.
- * netAmount = subtotal - totalDiscount
- * vat = netAmount * vat%
- * grandTotal = netAmount + vat
- */
+// roll the lines up into the order totals. VAT is charged on the net (after discount).
 export function computeOrderTotals(lines, vatPercent = 0) {
   const subtotal = round(lines.reduce((s, l) => s + l.grossAmount, 0));
   const totalDiscount = round(lines.reduce((s, l) => s + l.discountAmount, 0));
@@ -50,11 +38,8 @@ export function computeOrderTotals(lines, vatPercent = 0) {
   return { subtotal, totalDiscount, totalFoc, netAmount, vatPercent, vatAmount, grandTotal };
 }
 
-/**
- * Build a fully-priced line from a product doc + requested input.
- * Uses the requested discount/foc if provided, else falls back to the
- * product's configured discount % and FOC scheme.
- */
+// turn a product + whatever the request sent into a fully priced line.
+// if the request didn't send rate/discount/foc we just use the product's own values.
 export function buildPricedItem(product, input) {
   const quantity = Number(input.quantity);
   const rate = input.rate != null ? Number(input.rate) : Number(product.sellingPrice);
@@ -63,7 +48,7 @@ export function buildPricedItem(product, input) {
       ? Number(input.discountPercentage)
       : Number(product.discountPercentage || 0);
 
-  // FOC: use explicit value if supplied, otherwise derive from product scheme.
+  // take the FOC value if they sent one, otherwise work it out from the product
   const focQuantity =
     input.focQuantity != null
       ? Number(input.focQuantity)

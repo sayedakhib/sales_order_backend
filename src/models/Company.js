@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 
-// Single company profile printed on PDFs and used in emails.
+// our own company details - shows up on the PDFs and in the emails
 const companySchema = new mongoose.Schema(
   {
     name: { type: String, required: true },

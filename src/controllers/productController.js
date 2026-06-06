@@ -1,6 +1,8 @@
 import Product from '../models/Product.js';
 import { ApiError, asyncHandler } from '../utils/apiError.js';
 
+// one regex matched against all the searchable product fields (escaped so
+// special characters in the query are treated literally)
 function searchFilter(q) {
   if (!q) return {};
   const rx = new RegExp(q.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
@@ -15,7 +17,7 @@ function searchFilter(q) {
   };
 }
 
-// GET /api/products  -> list (filters: q, brand, category, generic, status, inStock)
+// GET /api/products - list, with a bunch of optional filters
 export const listProducts = asyncHandler(async (req, res) => {
   const { q, brand, category, generic, status, inStock, page = 1, limit = 50 } = req.query;
   const filter = { ...searchFilter(q) };
@@ -34,7 +36,7 @@ export const listProducts = asyncHandler(async (req, res) => {
   res.json({ success: true, total, page: Number(page), limit: Number(limit), data });
 });
 
-// GET /api/products/search?q=  -> search by name/code/brand/generic
+// GET /api/products/search?q= - autocomplete-style search
 export const searchProducts = asyncHandler(async (req, res) => {
   const { q } = req.query;
   if (!q) throw ApiError.badRequest('Query parameter "q" is required');
@@ -42,14 +44,15 @@ export const searchProducts = asyncHandler(async (req, res) => {
   res.json({ success: true, total: data.length, data });
 });
 
-// GET /api/products/:id  -> single product (stock, price, discount, FOC)
+// GET /api/products/:id - one product with all its details
 export const getProduct = asyncHandler(async (req, res) => {
   const product = await Product.findById(req.params.id);
   if (!product) throw ApiError.notFound('Product not found');
   res.json({ success: true, data: product });
 });
 
-// GET /api/products/:id/similar  -> same generic / same category / alternative brands
+// GET /api/products/:id/similar - same generic, same category, and brands
+// to switch to if this one's out of stock
 export const getSimilarProducts = asyncHandler(async (req, res) => {
   const product = await Product.findById(req.params.id);
   if (!product) throw ApiError.notFound('Product not found');
@@ -65,7 +68,7 @@ export const getSimilarProducts = asyncHandler(async (req, res) => {
       : [],
   ]);
 
-  // Alternative brands: same generic but a different brand, in stock.
+  // same drug, different brand, and actually in stock
   const alternativeBrands = sameGeneric.filter(
     (p) => p.brand?.toLowerCase() !== product.brand?.toLowerCase() && p.stockQuantity > 0
   );
@@ -82,7 +85,8 @@ export const getSimilarProducts = asyncHandler(async (req, res) => {
   });
 });
 
-// GET /api/products/:id/comparison  -> compare brand/price/stock/discount across same generic
+// GET /api/products/:id/comparison - line up every brand of the same generic
+// so you can compare price/stock/discount side by side
 export const getProductComparison = asyncHandler(async (req, res) => {
   const product = await Product.findById(req.params.id);
   if (!product) throw ApiError.notFound('Product not found');
@@ -110,12 +114,13 @@ export const getProductComparison = asyncHandler(async (req, res) => {
   });
 });
 
-// GET /api/products/:id/variations  -> e.g. Paracetamol -> 500mg Tablet, Syrup, Drops
+// GET /api/products/:id/variations - the different forms/strengths of a drug,
+// e.g. Paracetamol -> 500mg tablet, syrup, drops
 export const getProductVariations = asyncHandler(async (req, res) => {
   const product = await Product.findById(req.params.id);
   if (!product) throw ApiError.notFound('Product not found');
 
-  // Variations share the same generic name (different strength/form).
+  // variations all share the same generic name
   const key = product.genericName || product.productName;
   const variations = await Product.find({
     genericName: new RegExp(`^${key}$`, 'i'),

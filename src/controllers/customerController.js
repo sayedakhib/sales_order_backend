@@ -2,14 +2,15 @@ import Customer from '../models/Customer.js';
 import Order from '../models/Order.js';
 import { ApiError, asyncHandler } from '../utils/apiError.js';
 
-// Build a case-insensitive regex filter for free-text search.
+// case-insensitive search across the main customer fields.
+// the .replace() escapes regex chars so something like "(" can't blow up the query.
 function searchFilter(q) {
   if (!q) return {};
   const rx = new RegExp(q.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
   return { $or: [{ customerName: rx }, { customerCode: rx }, { contactPerson: rx }, { mobileNumber: rx }] };
 }
 
-// GET /api/customers  -> list (supports ?status= & ?q= & pagination)
+// GET /api/customers - list, with optional ?q, ?status and paging
 export const listCustomers = asyncHandler(async (req, res) => {
   const { q, status, page = 1, limit = 50 } = req.query;
   const filter = { ...searchFilter(q) };
@@ -24,7 +25,7 @@ export const listCustomers = asyncHandler(async (req, res) => {
   res.json({ success: true, total, page: Number(page), limit: Number(limit), data });
 });
 
-// GET /api/customers/search?q=  -> search by name or code
+// GET /api/customers/search?q= - quick search by name/code
 export const searchCustomers = asyncHandler(async (req, res) => {
   const { q } = req.query;
   if (!q) throw ApiError.badRequest('Query parameter "q" is required');
@@ -32,14 +33,14 @@ export const searchCustomers = asyncHandler(async (req, res) => {
   res.json({ success: true, total: data.length, data });
 });
 
-// GET /api/customers/:id  -> profile
+// GET /api/customers/:id - full profile
 export const getCustomer = asyncHandler(async (req, res) => {
   const customer = await Customer.findById(req.params.id);
   if (!customer) throw ApiError.notFound('Customer not found');
   res.json({ success: true, data: customer });
 });
 
-// GET /api/customers/:id/outstanding  -> outstanding balance + available credit
+// GET /api/customers/:id/outstanding - what they owe + how much credit is left
 export const getCustomerOutstanding = asyncHandler(async (req, res) => {
   const customer = await Customer.findById(req.params.id).select(
     'customerCode customerName creditLimit outstandingAmount'
@@ -58,7 +59,7 @@ export const getCustomerOutstanding = asyncHandler(async (req, res) => {
   });
 });
 
-// GET /api/customers/:id/history  -> purchase history (orders)
+// GET /api/customers/:id/history - past orders + how much they've bought
 export const getCustomerHistory = asyncHandler(async (req, res) => {
   const customer = await Customer.findById(req.params.id);
   if (!customer) throw ApiError.notFound('Customer not found');

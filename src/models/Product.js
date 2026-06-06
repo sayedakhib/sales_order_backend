@@ -8,14 +8,14 @@ const productSchema = new mongoose.Schema(
     brand: { type: String, default: '', trim: true },
     category: { type: String, default: '', trim: true },
 
-    // e.g. "500mg Tablet", "Syrup", "Drops" - used by the variations API.
+    // the form/strength, e.g. "500mg Tablet", "Syrup", "Drops"
     variation: { type: String, default: '' },
 
     stockQuantity: { type: Number, default: 0, min: 0 },
     sellingPrice: { type: Number, default: 0, min: 0 },
     discountPercentage: { type: Number, default: 0, min: 0, max: 100 },
 
-    // FOC (Free Of Charge): buy `focBuyQuantity` -> get `focFreeQuantity` free.
+    // free-of-charge deal: buy focBuyQuantity, get focFreeQuantity for free
     focBuyQuantity: { type: Number, default: 0, min: 0 },
     focFreeQuantity: { type: Number, default: 0, min: 0 },
 
@@ -33,7 +33,7 @@ productSchema.index({
   category: 'text',
 });
 
-// Whether the product currently has a FOC scheme.
+// quick flag for "does this product have a FOC offer"
 productSchema.virtual('hasFoc').get(function () {
   return this.focBuyQuantity > 0 && this.focFreeQuantity > 0;
 });

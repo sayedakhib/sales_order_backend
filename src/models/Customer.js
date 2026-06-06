@@ -20,9 +20,9 @@ const customerSchema = new mongoose.Schema(
     email: { type: String, default: '' },
     address: { type: addressSchema, default: () => ({}) },
 
-    // Credit limit configured by super admin (e.g. 100 OMR).
+    // credit limit the super admin sets (e.g. 100 OMR)
     creditLimit: { type: Number, default: 0, min: 0 },
-    // Outstanding amount from the customer's statement.
+    // how much they currently owe us
     outstandingAmount: { type: Number, default: 0, min: 0 },
 
     status: { type: String, enum: ['active', 'inactive'], default: 'active' },
@@ -30,10 +30,10 @@ const customerSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Text search across name, code and contact person.
+// lets us text-search by name/code/contact
 customerSchema.index({ customerName: 'text', customerCode: 'text', contactPerson: 'text' });
 
-// Virtual: available credit = limit - outstanding.
+// how much credit they still have left to spend (not stored, worked out on the fly)
 customerSchema.virtual('availableCredit').get(function () {
   return Math.max(0, (this.creditLimit || 0) - (this.outstandingAmount || 0));
 });

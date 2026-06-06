@@ -9,7 +9,7 @@ import {
 
 const router = Router();
 
-// NOTE: /search must be declared before /:id so it isn't captured as an id.
+// keep /search above /:id, otherwise express treats "search" as an id
 router.get('/', listCustomers);
 router.get('/search', searchCustomers);
 router.get('/:id', getCustomer);
